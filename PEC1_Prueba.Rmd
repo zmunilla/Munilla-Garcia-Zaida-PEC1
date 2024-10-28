@@ -1,0 +1,16 @@
+---
+title: "ADO _PEC1"
+author: "Zaida Munilla"
+date: "2024-10-28"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+cachexia <- read.csv("human_cachexia.csv")
+head(cachexia)
+```
+
