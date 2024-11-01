@@ -1,0 +1,202 @@
+---
+title: "Análisis de datos Ómicos - PEC1"
+author: "Zaida Munilla"
+date: "2024-10-31"
+output: 
+  word_document: 
+    toc: true
+  pdf_document: 
+    toc: true
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+---
+
+# ABSTRACT
+
+En la primera PEC de la asignatura Anaísis de Datos Ómicos he comenzado creando una cuenta en github para poder relacionar el Proyecto en R con un repositorio de mi cuenta en dicha aplicación. 
+Posteriormente he realizado la exploración de los datos del dataset human_cachexia.csv creando previamente un contenedor del tipo SummarizedExperiment. Para realizar este contenedor he revisado los siguientes enlaces:
+
+https://bioconductor.org/packages/release/bioc/manuals/SummarizedExperiment/man/SummarizedExperiment.pdf
+
+https://www.uv.es/ayala/docencia/tami/tami13.pdf  (Este documento me ha resultado de gran ayuda)
+
+Finalmente, a partir del objeto SEca de clase SummarizedExperiment , he realizado una primera visualización de los datos para tener una idea de los datos contenidos en el dataset y sus posibles problemas a la hora de realizar un análisis estadístico. 
+
+# OBJETIVOS
+
+A lo largo del desarrollo de la PEC mi objetivo se ha centrado en entender la estructura de los objetos de tipo SummarizedExperiment para poder construir uno a partir del dataset human_cachexia.csv y posteriormente iniciar un análisis de los datos con la intención de detectar la necesidad de realizar una depuración de los datos previamente al inicio de su futuro análisis estadístico.
+
+Por su parte, los objetivos del estudio que dieron lugar a los datos que se van a trabajar fueron los siguientes (fuente: http://darwin.di.uminho.pt/metabolomicspackage/cachexia.html):
+
+*La caquexia es un síndrome metabólico complejo asociado con una enfermedad subyacente (como el cáncer) y caracterizado por la pérdida de músculo con o sin pérdida de masa grasa. Mejores enfoques para detectar el inicio y la evolución de la atrofia muscular ayudarían a controlar los síndromes de atrofia y facilitarían la intervención temprana. Como es probable que los metabolitos producidos a partir de la descomposición del tejido sean un indicador sensible de atrofia muscular, se recolectaron muestras de orina ya que varios productos finales del catabolismo muscular se excretan específicamente en la orina.* 
+
+
+# MATERIALES Y MÉTODOS
+
+Los datos empleados han sido los del dataset human_cachexia.csv extraidos del siguiente link:
+
+https://github.com/nutrimetabolomics/metaboData/tree/main/Datasets/2024-Cachexia
+
+Este dataset en formato csv contiene los datos de 77 individuos, en concreto, se recogieron un total de 77 muestras de orina, siendo 47 de ellos pacientes con caquexia y 30 pacientes control. Se adquirieron todos los espectros de RMN unidimensionales de muestras de orina y luego se detectaron y cuantificaron los metabolitos, es decir, para cada metabolito se midió su concentración.
+
+Inicialmente, comencé la PEC creando la cuenta de github (https://github.com/zmunilla). Después siguiendo las instrucciones del siguiente enlace creé un repositorio y lo nombré como "Munilla-Garcia-Zaida-PEC1"
+
+fuente: http://destio.us.es/calvo/asignaturas/ge_esco/tutorialusargitgithubrstudio/UsarGitGithubconRStudio.html
+
+En RStudio creé un nuevo proyecto con control de versiones indicando la url de mi repositorio. 
+
+Para ir copiando los nuevos archivos creados en RStudio en el repositorio github, desde la pestaña "Git" selecciono los archivos que quiero volcar en el repositorio, selecciono Commit, incluyo un mensaje en el cuadro de texto y de nuevo Commit y posteriormente "Push". 
+
+Para iniciar el ejercicio decargué los archivos del enlace https://github.com/nutrimetabolomics/metaboData/tree/main/Datasets/2024-Cachexia y los copié en la carpeta que había asignado al proyecto de R. 
+
+Para crear el contenedor de tipo "SummarizedExperiment" procedo con el siguiente código: 
+
+Primero cargo la librería "SummarizedExperiment"
+
+```{r}
+library(SummarizedExperiment)
+```
+
+Cargo el dataset y veo una parte de los datos para ir haciéndome una idea del formato
+
+```{r}
+dfca <- read.csv("human_cachexia.csv", header=TRUE, sep=",")
+head(dfca)[1:3,1:3]
+```
+
+```{r}
+dim(dfca)
+```
+
+Transformo los datos en una matriz y selecciono únicamente los valores de los distintos metabolitos.
+Para poder crear el SummarizedExperiment hago la traspuesta de la matriz dado que necesitamos que las disintas muestras (en este caso las muestras de orina de cada individuo) se dispongan en las columnas, y los valores de los metabolitos en las filas:
+
+```{r}
+mat <- data.matrix(subset.data.frame(dfca[,3:65], row.names=1, col.names=dfca$Patient.ID))
+matt <- t(mat)
+colnames(matt) <- dfca$Patient.ID
+dim(matt)
+```
+
+Para realizar el otro dataframe que conforma el SummarizedExperiment selecciono las dos primeras columnas del dataset de inicio e indico que la primera columna se trata de los nombre de las filas.
+Así el único atributo de las muestras será si se trata de muestra control o de individuos con cachexia.
+
+
+```{r}
+colca <- data.frame(dfca[,1:2], row.names=1)
+colca$Muscle.loss <- as.factor(colca$Muscle.loss)
+head(colca,5)
+dim(colca)
+table(colca)
+```
+
+Procedemos a crear la lista con los metadatos del estudio que he extraído de la página: http://darwin.di.uminho.pt/metabolomicspackage/cachexia.html
+
+
+```{r}
+met <- c(name='Eisner et al.',
+                lab='Varios',
+                contact="chrisbcl@hotmail.com",
+                title='Learning to predict cancer-associated skeletal muscle wasting from 1h-nmr profiles of urinary metabolites. Metabolomics, 7:25–34, 2010.',
+                abstract='Cachexia is a complex metabolic syndrome associated with an underlying illness (such as cancer) and characterized by loss of muscle with or without loss of fat mass (Evans et al., 2008). A total of 77 urine samples were collected being 47 of them patients with cachexia, and 30 control patients',
+                url='https://www.metaboanalyst.ca/resources/data/human_cachexia.csv')
+```
+
+
+Con el siguiente código uno las 3 piezas y creo el contenedor que denomino SEca:
+
+```{r}
+SEca <- SummarizedExperiment(assays=list(counts=matt),
+                             colData=colca,
+                             metadata = met)
+```
+
+
+```{r}
+SEca
+```
+
+Para guardarlo por separado del resto de archivos:
+
+```{r}
+save(SEca, file="SEca.RData")
+```
+
+# RESULTADOS
+
+Procedo a obtener un análisis básico de los datos del contenedor creado: 
+
+```{r}
+head(colData(SEca))
+```
+
+```{r}
+dim(colData(SEca))
+```
+Puedo acceder a los metadata con el siguiente comando: 
+
+```{r}
+metadata(SEca)
+```
+
+
+```{r}
+head(assay(SEca))[1:3,1:3]
+```
+
+Podría plasmar un plot de cada uno de los metabolitos con su distribución en un plot de la siguiente manera: 
+
+```{r}
+plot(assay(SEca)[1,], main=rownames(assay(SEca))[1], ylab="Valor")
+```
+Esto me permitiría poder hacerme una idea de la presencia de outliers.
+Además, teniendo en cuenta que las primeras 47 muestras se trata de los individuos que presentaban cachexia y que los 30 últimos los individuos control, con estos gráficos podríamos intuir alguna relación entre la cachexia y los valores de alguno de los metabolitos. 
+
+Ahora realizaré un summary de la distribución de cada uno de los metabolitos, de manera que se pueda detectar también la presencia de valores atípicos (valores máximos o mínimos muy alejados de la media, por ejemplo).
+
+```{r}
+apply(t(assay(SEca)),2,summary)
+```
+Otro ejemplo de gráfico sería aplicar a todos los metabolitos un boxplot diferenciando los dos grupos "cachexia" y "control". En el siguiente código sólo se muestran los 4 primeros metabolitos como ejemplo. 
+
+```{r}
+par(mfrow=c(2,2))
+for (i in 1:4)
+     boxplot(assay(SEca)[i,] ~ colca$Muscle.loss, ylab="Valor",xlab=rownames(assay(SEca))[i])
+```
+
+Y del mismo modo se podrían realizar histogramas con la distribución de frecuencias de los valores de los distintos metabolitos. Se muestran los primeros 4 metabolitos. 
+
+```{r}
+par(mfrow=c(2,2))
+for (i in 1:4)
+     hist(assay(SEca)[i,], xlab= "Valor", main=rownames(assay(SEca))[i])
+```
+
+Para crear el archivo con los metadatos en un archivo .md he creado un nuevo archivo desde File>New file>Markdown file
+y he copiado los metadatos y los he pegado en el archivo creando el archivo metadatos_PEC1.md
+
+
+Para crear el archivo de los datos en formato texto:
+
+```{r}
+write.table(dfca, file="human_cachexia.txt", row.names=FALSE, sep=",")
+```
+
+
+# DISCUSIÓN Y LIMITACIONES. CONCLUSIONES DEL ESTUDIO
+
+La creación del contendor en formato SummarizedExperiment me ha llevado un tiempo, dado que no lo había trabajado antes, pero una vez realizado el primero ya resulta más sencillo poder aplicarlo en futuras ocasiones. 
+
+La extracción básica de datos me ha permitido ver que existen muchos valores atípicos que deberían estudiarse de cara a plantear eliminar ciertos registros del estudio. 
+
+Según algunos de los boxplots sí que parece haber relación entre los valores de ciertos metabolitos en orina y la presencia de cachexia en los individuos, por lo que parece interesante su estudio en profundidad (mediante análisis estadísticos) para valorar la utilidad de ciertos marcadores a la hora de determinar una cachexia incipiente en individuos que aún no presentan signos físicos de la misma. 
+
+
+# ENLACE A REPOSITORIO GITHUB
+
+https://github.com/zmunilla/Munilla-Garcia-Zaida-PEC1/tree/main
