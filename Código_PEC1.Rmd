@@ -1,13 +1,13 @@
 ---
 title: "Análisis de datos Ómicos - PEC1"
-author: "Zaida Munilla"
+author: "Zaida Munilla Garcia"
 date: "2024-10-31"
 output: 
-  word_document: 
-    toc: true
   pdf_document: 
     toc: true
     latex_engine: xelatex
+  word_document: 
+    toc: true
   html_document:
     toc: true
     toc_float: true
@@ -55,9 +55,10 @@ Para iniciar el ejercicio decargué los archivos del enlace https://github.com/n
 
 Para crear el contenedor de tipo "SummarizedExperiment" procedo con el siguiente código: 
 
-Primero cargo la librería "SummarizedExperiment"
+Primero cargo la librería "SummarizedExperiment" mediante el código 
 
-```{r}
+
+```{r message=FALSE, warning=FALSE}
 library(SummarizedExperiment)
 ```
 
